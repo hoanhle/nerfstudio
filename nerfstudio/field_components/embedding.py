@@ -33,14 +33,15 @@ class Embedding(FieldComponent):
         out_dim: Dimension of the embedding vectors
     """
 
-    def __init__(self, in_dim: int, out_dim: int) -> None:
+    def __init__(self, in_dim: int, out_dim: int, device: str) -> None:
         super().__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.device = device
         self.build_nn_modules()
 
     def build_nn_modules(self) -> None:
-        self.embedding = torch.nn.Embedding(self.in_dim, self.out_dim)
+        self.embedding = torch.nn.Embedding(self.in_dim, self.out_dim).to(self.device)
 
     def mean(self, dim=0):
         """Return the mean of the embedding weights along a dim."""
