@@ -173,7 +173,7 @@ class NerfactoModel(Model):
         )
 
         self.camera_optimizer: CameraOptimizer = self.config.camera_optimizer.setup(
-            num_cameras=self.num_train_data, device="cpu"
+            num_cameras=self.num_train_data, device=self.device
         )
         self.density_fns = []
         num_prop_nets = self.config.num_proposal_iterations
@@ -247,7 +247,7 @@ class NerfactoModel(Model):
         from torchmetrics.image import PeakSignalNoiseRatio
         from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 
-        self.psnr = PeakSignalNoiseRatio(data_range=1.0)
+        self.psnr = PeakSignalNoiseRatio(data_range=1.0).to(self.device)
         self.ssim = structural_similarity_index_measure
         self.lpips = LearnedPerceptualImagePatchSimilarity(normalize=True)
         self.step = 0
@@ -351,7 +351,7 @@ class NerfactoModel(Model):
         metrics_dict = {}
         gt_rgb = batch["image"].to(self.device)  # RGB or RGBA image
         gt_rgb = self.renderer_rgb.blend_background(gt_rgb)  # Blend if RGBA
-        predicted_rgb = outputs["rgb"]
+        predicted_rgb = outputs["rgb"].to(self.device)
         metrics_dict["psnr"] = self.psnr(predicted_rgb, gt_rgb)
 
         if self.training:

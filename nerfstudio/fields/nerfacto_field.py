@@ -98,7 +98,7 @@ class NerfactoField(Field):
         implementation: Literal["tcnn", "torch"] = "tcnn",
     ) -> None:
         super().__init__()
-
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.register_buffer("aabb", aabb)
         self.geo_feat_dim = geo_feat_dim
 
@@ -110,7 +110,7 @@ class NerfactoField(Field):
         self.num_images = num_images
         self.appearance_embedding_dim = appearance_embedding_dim
         if self.appearance_embedding_dim > 0:
-            self.embedding_appearance = Embedding(self.num_images, self.appearance_embedding_dim)
+            self.embedding_appearance = Embedding(self.num_images, self.appearance_embedding_dim, device=self.device)
         else:
             self.embedding_appearance = None
         self.use_average_appearance_embedding = use_average_appearance_embedding
@@ -244,12 +244,12 @@ class NerfactoField(Field):
         embedded_appearance = None
         if self.embedding_appearance is not None:
             if self.training:
-                embedded_appearance = self.embedding_appearance(camera_indices)
+                embedded_appearance = self.embedding_appearance(camera_indices).to(directions.device)
             else:
                 if self.use_average_appearance_embedding:
                     embedded_appearance = torch.ones(
                         (*directions.shape[:-1], self.appearance_embedding_dim), device=directions.device
-                    ) * self.embedding_appearance.mean(dim=0)
+                    ) * self.embedding_appearance.mean(dim=0).to(directions.device)
                 else:
                     embedded_appearance = torch.zeros(
                         (*directions.shape[:-1], self.appearance_embedding_dim), device=directions.device
@@ -257,7 +257,7 @@ class NerfactoField(Field):
 
         # transients
         if self.use_transient_embedding and self.training:
-            embedded_transient = self.embedding_transient(camera_indices)
+            embedded_transient = self.embedding_transient(camera_indices).to(directions.device)
             transient_input = torch.cat(
                 [
                     density_embedding.view(-1, self.geo_feat_dim),
